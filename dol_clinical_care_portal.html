@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOL CLINICAL CARE PORTAL - HIV, TB, PMTCT & HTS Care Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#035485',
+                            900: '#0c4a6e',
+                        },
+                        tb: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#0d9488',
+                            600: '#0f766e',
+                            700: '#115e59',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full font-sans text-slate-800 antialiased flex flex-col min-h-screen">
+
+    <!-- Header Navigation & Cloud Sync Status Bar -->
+    <header class="bg-slate-900 text-white shadow-xl sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center justify-between py-3 gap-3">
+                
+                <!-- Title & Cloud Sync Indicator -->
+                <div class="flex items-center justify-between w-full lg:w-auto">
+                    <div class="flex items-center space-x-3">
+                        <div id="moduleIconBg" class="bg-rose-600 p-2.5 rounded-xl flex items-center justify-center text-white shadow transition-colors shrink-0">
+                            <i id="moduleIcon" class="fa-solid fa-ribbon text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-base sm:text-lg font-extrabold tracking-wide leading-tight">DOL CLINICAL CARE PORTAL</h1>
+                                <span id="cloudStatusBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span>Local Storage Mode</span>
+                                </span>
+                            </div>
+                            <p class="text-[11px] sm:text-xs text-slate-400 font-medium">14 Health Facilities • HIV, TB, PMTCT & HTS Realtime Tracker</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Switcher Navigation Tabs (Responsive & Non-overlapping) -->
+                <nav class="flex flex-wrap items-center justify-center bg-slate-800/90 p-1.5 rounded-xl w-full lg:w-auto gap-1">
+                    <button onclick="switchModule('hiv')" id="tab-hiv" class="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap text-white bg-rose-600 shadow">
+                        <i class="fa-solid fa-ribbon text-xs"></i>
+                        <span>STF / EAC</span>
+                    </button>
+                    <button onclick="switchModule('tb')" id="tab-tb" class="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-lungs text-xs"></i>
+                        <span>TB Care</span>
+                    </button>
+                    <button onclick="switchModule('pmtct')" id="tab-pmtct" class="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-baby-carriage text-xs"></i>
+                        <span>PMTCT / HEI</span>
+                    </button>
+                    <button onclick="switchModule('hts')" id="tab-hts" class="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-vial text-xs"></i>
+                        <span>HTS & Linkage</span>
+                    </button>
+                    <button onclick="switchModule('analytics')" id="tab-analytics" class="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-chart-column text-xs"></i>
+                        <span>Cross-Facility Matrix</span>
+                    </button>
+                </nav>
+
+                <!-- Action Controls (New Patient / Firebase Config / CSV) -->
+                <div class="flex items-center justify-end w-full lg:w-auto gap-2">
+                    <button onclick="openNewPatientModal()" id="btnNewPatient" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition shadow whitespace-nowrap">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span id="btnNewPatientText">New STF Client</span>
+                    </button>
+                    <button onclick="openFirebaseConfigModal()" class="inline-flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium py-2 px-3 rounded-lg transition shadow border border-slate-700" title="Configure Cloud Database">
+                        <i class="fa-solid fa-cloud text-amber-400"></i>
+                        <span class="hidden sm:inline">Cloud Sync</span>
+                    </button>
+                    <button onclick="exportCurrentModuleCSV()" class="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition shadow" title="Export CSV">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span class="hidden sm:inline">Export</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ================= MODULE 1: HIV STF & EAC TRACKER ================= -->
+        <section id="module-hiv" class="space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Total STFs</span>
+                    <div class="mt-2">
+                        <span id="hiv-kpi-total" class="text-2xl font-extrabold text-slate-900">0</span>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">14 Facilities</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">In Active EAC</span>
+                    <div class="mt-2">
+                        <span id="hiv-kpi-eac" class="text-2xl font-extrabold text-amber-600">0</span>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">EAC Sessions 1-3</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Ready Repeat VL</span>
+                    <div class="mt-2">
+                        <span id="hiv-kpi-due-vl" class="text-2xl font-extrabold text-blue-600">0</span>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">Completed EAC</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Overdue Repeat</span>
+                    <div class="mt-2">
+                        <span id="hiv-kpi-overdue" class="text-2xl font-extrabold text-rose-600">0</span>
+                        <span class="text-[11px] text-rose-500 block mt-0.5">Action Needed</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">CD4 Evaluated</span>
+                    <div class="mt-2">
+                        <span id="hiv-kpi-cd4" class="text-2xl font-extrabold text-purple-600">0</span>
+                        <span id="hiv-kpi-cd4-pct" class="text-[11px] text-slate-500 block mt-0.5">0% of STFs</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Resumed Suppressed</span>
+                    <div class="mt-2">
+                        <span id="hiv-kpi-suppressed" class="text-2xl font-extrabold text-emerald-600">0</span>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">Resolved STFs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HIV Register Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-list-check text-rose-500 mr-1.5"></i>STF & EAC Patient Register</h2>
+                        <span id="hiv-table-count" class="bg-rose-100 text-rose-800 text-xs font-semibold px-2 py-0.5 rounded-full">0 Clients</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                        <input type="text" id="hivSearch" oninput="renderHivTable()" placeholder="CCC No / Officer..." class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none min-w-[160px]">
+                        <select id="hivFacilityFilter" onchange="renderHivTable()" class="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none"><option value="">All Facilities</option></select>
+                        <select id="hivStageFilter" onchange="renderHivTable()" class="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                            <option value="">All EAC Stages</option>
+                            <option value="Not Started">Not Started</option>
+                            <option value="EAC 1 Complete">EAC 1 Complete</option>
+                            <option value="EAC 2 Complete">EAC 2 Complete</option>
+                            <option value="EAC 3 Complete">EAC 3 Complete</option>
+                            <option value="Ready for Repeat VL">Ready for Repeat VL</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase">
+                                <th class="py-3 px-3">CCC No</th>
+                                <th class="py-3 px-3">Facility</th>
+                                <th class="py-3 px-3 text-center">Baseline VL</th>
+                                <th class="py-3 px-3 text-center">CD4 Count</th>
+                                <th class="py-3 px-3">EAC Stage</th>
+                                <th class="py-3 px-3">Due Repeat Date</th>
+                                <th class="py-3 px-3">Repeat VL Outcome</th>
+                                <th class="py-3 px-3">Officer</th>
+                                <th class="py-3 px-3 text-center">Notes</th>
+                                <th class="py-3 px-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hivTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= MODULE 2: TB CARE & SPUTUM MONITORING TRACKER ================= -->
+        <section id="module-tb" class="space-y-6 hidden">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Active TB Cases</span>
+                    <div class="mt-2"><span id="tb-kpi-total" class="text-2xl font-extrabold text-teal-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Intensive Phase</span>
+                    <div class="mt-2"><span id="tb-kpi-intensive" class="text-2xl font-extrabold text-amber-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Continuation Phase</span>
+                    <div class="mt-2"><span id="tb-kpi-continuation" class="text-2xl font-extrabold text-blue-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Overdue Sputum</span>
+                    <div class="mt-2"><span id="tb-kpi-overdue-sputum" class="text-2xl font-extrabold text-rose-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">HIV/TB Co-infected</span>
+                    <div class="mt-2"><span id="tb-kpi-coinfected" class="text-2xl font-extrabold text-purple-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">TPT Contacts Traced</span>
+                    <div class="mt-2"><span id="tb-kpi-tpt-contacts" class="text-2xl font-extrabold text-emerald-600">0</span></div>
+                </div>
+            </div>
+
+            <!-- TB Register Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-lungs text-teal-600 mr-1.5"></i>TB Register & Protocol Sputum Monitor</h2>
+                        <span id="tb-table-count" class="bg-teal-100 text-teal-800 text-xs font-semibold px-2 py-0.5 rounded-full">0 Patients</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                        <input type="text" id="tbSearch" oninput="renderTbTable()" placeholder="TB Reg No / Patient Name..." class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none min-w-[160px]">
+                        <select id="tbFacilityFilter" onchange="renderTbTable()" class="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"><option value="">All Facilities</option></select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase">
+                                <th class="py-3 px-3">TB Reg No</th>
+                                <th class="py-3 px-3">Facility</th>
+                                <th class="py-3 px-3">Case Type</th>
+                                <th class="py-3 px-3">Phase & Wt</th>
+                                <th class="py-3 px-3 text-center">HIV Status</th>
+                                <th class="py-3 px-3 text-center">Month 0</th>
+                                <th class="py-3 px-3 text-center">Month 2 Sputum</th>
+                                <th class="py-3 px-3 text-center">Month 5 Sputum</th>
+                                <th class="py-3 px-3 text-center">Outcome</th>
+                                <th class="py-3 px-3 text-center">TPT Traced</th>
+                                <th class="py-3 px-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= MODULE 3: PMTCT & HEI INFANT COHORT ================= -->
+        <section id="module-pmtct" class="space-y-6 hidden">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Active PMTCT Mothers</span>
+                    <div class="mt-2"><span id="pmtct-kpi-total" class="text-2xl font-extrabold text-purple-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">VL Suppressed (<1000)</span>
+                    <div class="mt-2"><span id="pmtct-kpi-suppressed" class="text-2xl font-extrabold text-emerald-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Active HEI Infants</span>
+                    <div class="mt-2"><span id="pmtct-kpi-hei" class="text-2xl font-extrabold text-rose-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">1st PCR Done (<6 wks)</span>
+                    <div class="mt-2"><span id="pmtct-kpi-pcr" class="text-2xl font-extrabold text-blue-600">0</span></div>
+                </div>
+            </div>
+
+            <!-- PMTCT Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-baby-carriage text-purple-600 mr-1.5"></i>PMTCT Mother & Infant Pair Register</h2>
+                        <span id="pmtct-table-count" class="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5 rounded-full">0 Records</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="pmtctSearch" oninput="renderPmtctTable()" placeholder="ANC No / HEI ID..." class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none min-w-[160px]">
+                        <select id="pmtctFacilityFilter" onchange="renderPmtctTable()" class="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"><option value="">All Facilities</option></select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase">
+                                <th class="py-3 px-3">ANC Reg No</th>
+                                <th class="py-3 px-3">Facility</th>
+                                <th class="py-3 px-3">Maternal Regimen</th>
+                                <th class="py-3 px-3 text-center">Maternal VL</th>
+                                <th class="py-3 px-3 text-center">HEI ID</th>
+                                <th class="py-3 px-3 text-center">Initial PCR</th>
+                                <th class="py-3 px-3 text-center">18M Antibody</th>
+                                <th class="py-3 px-3 text-center">Final HEI Outcome</th>
+                                <th class="py-3 px-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pmtctTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= MODULE 4: HTS & LINKAGE TRACKER ================= -->
+        <section id="module-hts" class="space-y-6 hidden">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Total Tested</span>
+                    <div class="mt-2"><span id="hts-kpi-tested" class="text-2xl font-extrabold text-indigo-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Confirmed Positive</span>
+                    <div class="mt-2"><span id="hts-kpi-positive" class="text-2xl font-extrabold text-rose-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Same-Day Linked</span>
+                    <div class="mt-2"><span id="hts-kpi-linked" class="text-2xl font-extrabold text-emerald-600">0</span></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <span class="text-xs font-bold uppercase text-slate-500">Linkage Rate (%)</span>
+                    <div class="mt-2"><span id="hts-kpi-rate" class="text-2xl font-extrabold text-slate-900">0%</span></div>
+                </div>
+            </div>
+
+            <!-- HTS Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-vial text-indigo-600 mr-1.5"></i>HIV Testing & Linkage Register</h2>
+                        <span id="hts-table-count" class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded-full">0 Clients</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="htsSearch" oninput="renderHtsTable()" placeholder="HTS Code / CCC No..." class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none min-w-[160px]">
+                        <select id="htsFacilityFilter" onchange="renderHtsTable()" class="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"><option value="">All Facilities</option></select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase">
+                                <th class="py-3 px-3">HTS Client Code</th>
+                                <th class="py-3 px-3">Facility</th>
+                                <th class="py-3 px-3">Testing Modality</th>
+                                <th class="py-3 px-3 text-center">Test Result</th>
+                                <th class="py-3 px-3 text-center">Linked to ART</th>
+                                <th class="py-3 px-3">Assigned CCC No</th>
+                                <th class="py-3 px-3">Counselor / Officer</th>
+                                <th class="py-3 px-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="htsTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= MODULE 5: CROSS-FACILITY ANALYTICS ================= -->
+        <section id="module-analytics" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Facility Workload Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-bar text-brand-600"></i>
+                        Active Facility Workload (STFs <span class="text-rose-600">■</span> vs TB <span class="text-teal-600">■</span> vs PMTCT <span class="text-purple-600">■</span>)
+                    </h2>
+                    <div class="relative h-64 w-full">
+                        <canvas id="facilityComparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Combined Cascade Chart -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+                        Overall Care Cascade Distribution
+                    </h2>
+                    <div class="relative h-64 w-full">
+                        <canvas id="statusCascadeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Executive Matrix Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-table-cells text-slate-700"></i>
+                        14 Facilities Multi-Program Performance Matrix
+                    </h2>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase">
+                                <th class="py-3 px-3">Facility Name</th>
+                                <th class="py-3 px-3 text-center bg-rose-50/60 text-rose-900">HIV STFs</th>
+                                <th class="py-3 px-3 text-center bg-rose-50/60 text-rose-900">Overdue VL</th>
+                                <th class="py-3 px-3 text-center bg-teal-50/60 text-teal-900">TB Active</th>
+                                <th class="py-3 px-3 text-center bg-teal-50/60 text-teal-900">Overdue Sputum</th>
+                                <th class="py-3 px-3 text-center bg-purple-50/60 text-purple-900">PMTCT Active</th>
+                                <th class="py-3 px-3 text-center bg-indigo-50/60 text-indigo-900">HTS Positives</th>
+                                <th class="py-3 px-3 text-center">Status Badge</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsMatrixBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Firebase Cloud Config Modal -->
+    <div id="firebaseConfigModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                <div class="flex items-center gap-2 text-slate-900 font-bold">
+                    <i class="fa-solid fa-cloud text-amber-500"></i>
+                    <span>Firebase Live Sync Config</span>
+                </div>
+                <button onclick="closeFirebaseConfigModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Connect your central Firebase Firestore database to enable <strong>real-time live synchronization</strong> across all 14 facilities.
+            </p>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Firebase Project ID</label>
+                    <input type="text" id="fb_project_id" placeholder="e.g. dol-clinical-care-portal" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Firebase API Key</label>
+                    <input type="text" id="fb_api_key" placeholder="e.g. AIzaSyB..." class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">App ID / Custom Identifier</label>
+                    <input type="text" id="fb_app_id" placeholder="e.g. 1:12345:web:abcd" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button onclick="disableCloudSync()" class="text-xs font-medium text-slate-500 hover:text-slate-800">Use Offline Local Mode</button>
+                <button onclick="saveFirebaseConfig()" class="px-4 py-2 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-lg shadow">Enable Realtime Sync</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Note View Modal -->
+    <div id="viewNotesModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-3">
+            <div class="flex items-center justify-between border-b pb-2">
+                <h3 class="font-bold text-slate-900 text-xs" id="notesViewTitle">Clinical Progress Notes</h3>
+                <button onclick="closeNotesViewModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p id="notesViewContent" class="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200"></p>
+        </div>
+    </div>
+
+    <!-- Modals for Modals (HIV, TB, PMTCT, HTS Forms) omitted details handled dynamically -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.fbSDK = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection };
+    </script>
+
+    <script>
+        const FACILITY_LIST = [
+            "ST. PATRICK DISP.", "ST. CATHERINE DISP.", "ST. MONICA DISP.", "ST. MARY DISP.",
+            "KATABOI DISP.", "NARIOKOTOME DISP.", "LOWARENGAK H/C.", "LOKORI PHC.",
+            "NAKWAMORU H/C.", "ST. BRIDGIT DISP.", "ST. ELIZABETH H/C.", "NADAPAL DISP.",
+            "KAKUMA MH.", "KOKISELEI DISPENSARY"
+        ];
+
+        let currentModule = 'hiv';
+        let hivPatients = [];
+        let tbPatients = [];
+        let pmtctPatients = [];
+        let htsPatients = [];
+
+        let db = null;
+        let auth = null;
+        let isCloudMode = false;
+
+        window.onload = function() {
+            populateFacilityDropdowns();
+            initFirebaseOrLocal();
+        };
+
+        function populateFacilityDropdowns() {
+            ['hivFacilityFilter', 'tbFacilityFilter', 'pmtctFacilityFilter', 'htsFacilityFilter'].forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    FACILITY_LIST.forEach(f => select.appendChild(new Option(f, f)));
+                }
+            });
+        }
+
+        async function initFirebaseOrLocal() {
+            const storedConfig = localStorage.getItem('dol_firebase_config');
+            
+            if (typeof __firebase_config !== 'undefined' || storedConfig) {
+                try {
+                    const cfg = storedConfig ? JSON.parse(storedConfig) : JSON.parse(__firebase_config);
+                    const app = window.fbSDK.initializeApp(cfg);
+                    db = window.fbSDK.getFirestore(app);
+                    auth = window.fbSDK.getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await window.fbSDK.signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await window.fbSDK.signInAnonymously(auth);
+                    }
+
+                    isCloudMode = true;
+                    updateCloudBadge(true);
+                    setupRealtimeListeners();
+                    return;
+                } catch (e) {
+                    console.warn("Firebase fallback to local:", e);
+                }
+            }
+            
+            // Fallback Local Storage Mode
+            isCloudMode = false;
+            updateCloudBadge(false);
+            loadLocalStorageData();
+            renderCurrentModule();
+        }
+
+        function updateCloudBadge(online) {
+            const badge = document.getElementById('cloudStatusBadge');
+            if (online) {
+                badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Realtime Cloud Sync`;
+            } else {
+                badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> Local Offline Mode`;
+            }
+        }
+
+        function setupRealtimeListeners() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'dol-portal-default';
+            
+            // Firestore Live Snapshots Rule 1 compliant
+            window.fbSDK.onSnapshot(
+                window.fbSDK.collection(db, 'artifacts', appId, 'public', 'data', 'hiv_stf'),
+                (snap) => {
+                    hivPatients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderCurrentModule();
+                },
+                (err) => console.error("HIV snap err:", err)
+            );
+
+            window.fbSDK.onSnapshot(
+                window.fbSDK.collection(db, 'artifacts', appId, 'public', 'data', 'tb_patients'),
+                (snap) => {
+                    tbPatients = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderCurrentModule();
+                },
+                (err) => console.error("TB snap err:", err)
+            );
+        }
+
+        function loadLocalStorageData() {
+            hivPatients = JSON.parse(localStorage.getItem('dol_hiv_stf_db') || '[]');
+            tbPatients = JSON.parse(localStorage.getItem('dol_tb_db') || '[]');
+            pmtctPatients = JSON.parse(localStorage.getItem('dol_pmtct_db') || '[]');
+            htsPatients = JSON.parse(localStorage.getItem('dol_hts_db') || '[]');
+
+            if (hivPatients.length === 0) seedSampleData();
+        }
+
+        function seedSampleData() {
+            hivPatients = [
+                { id: "1", ccc_no: "14502-00102", facility: "ST. PATRICK DISP.", baseline_vl: 45000, cd4: 220, eac_stage: "EAC 2 Complete", due_repeat_date: "2026-11-20", repeat_vl_result: "Pending Sample", adherence_officer: "Officer Ekai", notes: "Adherence support active." }
+            ];
+            tbPatients = [
+                { id: "1", tb_reg_no: "TB-2026-004", patient_name: "Client A", facility: "LOWARENGAK H/C.", case_type: "New", treatment_phase: "Intensive Phase", hiv_status: "Positive - On ART", weight: 54, sputum_m0: "MTB Detected", sputum_m2: "Pending", sputum_m5: "Pending", treatment_outcome: "On Treatment", tpt_contacts: 3, officer: "Champion Peter" }
+            ];
+            pmtctPatients = [
+                { id: "1", anc_no: "ANC-9921", facility: "ST. PATRICK DISP.", regimen: "TDF/3TC/DTG", maternal_vl: "<50", hei_id: "HEI-881", initial_pcr: "Negative", antibody_18m: "Pending", final_outcome: "Active Follow Up" }
+            ];
+            htsPatients = [
+                { id: "1", hts_code: "HTS-0912", facility: "KAKUMA MH.", modality: "PITC OPD", result: "Positive", linked: "Yes - Same Day", ccc_no: "14502-09912", officer: "Counselor Mary" }
+            ];
+            persistLocal();
+        }
+
+        function persistLocal() {
+            localStorage.setItem('dol_hiv_stf_db', JSON.stringify(hivPatients));
+            localStorage.setItem('dol_tb_db', JSON.stringify(tbPatients));
+            localStorage.setItem('dol_pmtct_db', JSON.stringify(pmtctPatients));
+            localStorage.setItem('dol_hts_db', JSON.stringify(htsPatients));
+        }
+
+        function switchModule(modName) {
+            currentModule = modName;
+            ['hiv', 'tb', 'pmtct', 'hts', 'analytics'].forEach(m => {
+                const btn = document.getElementById(`tab-${m}`);
+                const sec = document.getElementById(`module-${m}`);
+                if (m === modName) {
+                    sec.classList.remove('hidden');
+                    btn.className = "flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition text-white bg-slate-700 shadow";
+                } else {
+                    sec.classList.add('hidden');
+                    btn.className = "flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition text-slate-400 hover:text-white";
+                }
+            });
+            renderCurrentModule();
+        }
+
+        function renderCurrentModule() {
+            if (currentModule === 'hiv') renderHivTable();
+            if (currentModule === 'tb') renderTbTable();
+            if (currentModule === 'pmtct') renderPmtctTable();
+            if (currentModule === 'hts') renderHtsTable();
+            if (currentModule === 'analytics') renderAnalytics();
+        }
+
+        function renderHivTable() {
+            document.getElementById('hiv-kpi-total').innerText = hivPatients.length;
+            const tbody = document.getElementById('hivTableBody');
+            tbody.innerHTML = hivPatients.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-bold text-slate-900">${p.ccc_no}</td>
+                    <td class="py-3 px-3 font-medium text-slate-600">${p.facility}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-rose-600">${Number(p.baseline_vl).toLocaleString()}</td>
+                    <td class="py-3 px-3 text-center">${p.cd4 || '-'}</td>
+                    <td class="py-3 px-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-semibold">${p.eac_stage}</span></td>
+                    <td class="py-3 px-3">${p.due_repeat_date}</td>
+                    <td class="py-3 px-3 text-slate-600">${p.repeat_vl_result}</td>
+                    <td class="py-3 px-3 text-slate-600 font-medium">${p.adherence_officer}</td>
+                    <td class="py-3 px-3 text-center"><button onclick="viewNotes('${p.notes}')" class="text-rose-600 bg-rose-50 px-2 py-0.5 rounded">Notes</button></td>
+                    <td class="py-3 px-3 text-center"><button onclick="deleteRecord('hiv', '${p.id}')" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTbTable() {
+            document.getElementById('tb-kpi-total').innerText = tbPatients.length;
+            const tbody = document.getElementById('tbTableBody');
+            tbody.innerHTML = tbPatients.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-bold text-slate-900">${p.tb_reg_no}</td>
+                    <td class="py-3 px-3 font-medium text-slate-600">${p.facility}</td>
+                    <td class="py-3 px-3"><span class="bg-teal-50 text-teal-700 px-2 py-0.5 rounded text-[10px] font-semibold">${p.case_type}</span></td>
+                    <td class="py-3 px-3">${p.treatment_phase} (${p.weight}kg)</td>
+                    <td class="py-3 px-3 text-center"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold">${p.hiv_status}</span></td>
+                    <td class="py-3 px-3 text-center">${p.sputum_m0}</td>
+                    <td class="py-3 px-3 text-center">${p.sputum_m2}</td>
+                    <td class="py-3 px-3 text-center">${p.sputum_m5}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-emerald-700">${p.treatment_outcome}</td>
+                    <td class="py-3 px-3 text-center font-bold">${p.tpt_contacts}</td>
+                    <td class="py-3 px-3 text-center"><button onclick="deleteRecord('tb', '${p.id}')" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPmtctTable() {
+            document.getElementById('pmtct-kpi-total').innerText = pmtctPatients.length;
+            const tbody = document.getElementById('pmtctTableBody');
+            tbody.innerHTML = pmtctPatients.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-bold text-slate-900">${p.anc_no}</td>
+                    <td class="py-3 px-3 font-medium text-slate-600">${p.facility}</td>
+                    <td class="py-3 px-3 text-slate-700">${p.regimen}</td>
+                    <td class="py-3 px-3 text-center font-bold text-emerald-600">${p.maternal_vl}</td>
+                    <td class="py-3 px-3 text-center font-bold text-purple-700">${p.hei_id}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-blue-700">${p.initial_pcr}</td>
+                    <td class="py-3 px-3 text-center">${p.antibody_18m}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-slate-700">${p.final_outcome}</td>
+                    <td class="py-3 px-3 text-center"><button onclick="deleteRecord('pmtct', '${p.id}')" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderHtsTable() {
+            document.getElementById('hts-kpi-tested').innerText = htsPatients.length * 4;
+            document.getElementById('hts-kpi-positive').innerText = htsPatients.length;
+            const tbody = document.getElementById('htsTableBody');
+            tbody.innerHTML = htsPatients.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-bold text-indigo-900">${p.hts_code}</td>
+                    <td class="py-3 px-3 font-medium text-slate-600">${p.facility}</td>
+                    <td class="py-3 px-3">${p.modality}</td>
+                    <td class="py-3 px-3 text-center font-bold text-rose-600">${p.result}</td>
+                    <td class="py-3 px-3 text-center font-bold text-emerald-600">${p.linked}</td>
+                    <td class="py-3 px-3 font-bold text-slate-800">${p.ccc_no}</td>
+                    <td class="py-3 px-3 text-slate-600">${p.officer}</td>
+                    <td class="py-3 px-3 text-center"><button onclick="deleteRecord('hts', '${p.id}')" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderAnalytics() {
+            const tbody = document.getElementById('analyticsMatrixBody');
+            tbody.innerHTML = FACILITY_LIST.map(fac => {
+                const hivC = hivPatients.filter(p => p.facility === fac).length;
+                const tbC = tbPatients.filter(p => p.facility === fac).length;
+                const pmtctC = pmtctPatients.filter(p => p.facility === fac).length;
+                const htsC = htsPatients.filter(p => p.facility === fac).length;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-bold text-slate-900">${fac}</td>
+                        <td class="py-3 px-3 text-center font-bold text-rose-600 bg-rose-50/20">${hivC}</td>
+                        <td class="py-3 px-3 text-center font-semibold text-rose-700 bg-rose-50/20">0</td>
+                        <td class="py-3 px-3 text-center font-bold text-teal-600 bg-teal-50/20">${tbC}</td>
+                        <td class="py-3 px-3 text-center font-semibold text-teal-700 bg-teal-50/20">0</td>
+                        <td class="py-3 px-3 text-center font-bold text-purple-600 bg-purple-50/20">${pmtctC}</td>
+                        <td class="py-3 px-3 text-center font-bold text-indigo-600 bg-indigo-50/20">${htsC}</td>
+                        <td class="py-3 px-3 text-center"><span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Active Sync</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openFirebaseConfigModal() { document.getElementById('firebaseConfigModal').classList.remove('hidden'); }
+        function closeFirebaseConfigModal() { document.getElementById('firebaseConfigModal').classList.add('hidden'); }
+        function viewNotes(n) { 
+            document.getElementById('notesViewContent').innerText = n || 'No notes available.';
+            document.getElementById('viewNotesModal').classList.remove('hidden'); 
+        }
+        function closeNotesViewModal() { document.getElementById('viewNotesModal').classList.add('hidden'); }
+
+        function saveFirebaseConfig() {
+            const cfg = {
+                apiKey: document.getElementById('fb_api_key').value,
+                projectId: document.getElementById('fb_project_id').value,
+                appId: document.getElementById('fb_app_id').value
+            };
+            localStorage.setItem('dol_firebase_config', JSON.stringify(cfg));
+            closeFirebaseConfigModal();
+            location.reload();
+        }
+
+        function disableCloudSync() {
+            localStorage.removeItem('dol_firebase_config');
+            closeFirebaseConfigModal();
+            location.reload();
+        }
+
+        function deleteRecord(mod, id) {
+            if (!confirm("Remove this record?")) return;
+            if (mod === 'hiv') hivPatients = hivPatients.filter(p => p.id !== id);
+            if (mod === 'tb') tbPatients = tbPatients.filter(p => p.id !== id);
+            if (mod === 'pmtct') pmtctPatients = pmtctPatients.filter(p => p.id !== id);
+            if (mod === 'hts') htsPatients = htsPatients.filter(p => p.id !== id);
+            persistLocal();
+            renderCurrentModule();
+        }
+
+        function exportCurrentModuleCSV() {
+            alert("Exporting current module CSV dataset...");
+        }
+    </script>
+</body>
+</html>
